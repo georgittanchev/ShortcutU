@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Shortcut Extension Options</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-container {
+            margin-bottom: 30px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #shortcuts {
+            margin-top: 30px;
+        }
+        .shortcut-item {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .shortcut-item span {
+            font-weight: bold;
+        }
+        .shortcut-item button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        #logoutButton {
+            background-color: #e74c3c;
+        }
+        #logoutButton:hover {
+            background-color: #c0392b;
+        }
+        #update, #cancel {
+            display: none;
+        }
+        #cancel {
+            background-color: #95a5a6;
+        }
+        #cancel:hover {
+            background-color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Text Shortcut Extension</h1>
+
+        <div id="loginForm" class="form-container">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button id="loginButton">Login</button>
+        </div>
+
+        <div id="shortcutForm" class="form-container" style="display: none;">
+            <h2>Add/Edit Shortcut</h2>
+            <input type="text" id="shortcut" placeholder="Shortcut">
+            <textarea id="expansion" placeholder="Expansion"></textarea>
+            <button id="add">Add Shortcut</button>
+            <button id="update">Update Shortcut</button>
+            <button id="cancel">Cancel</button>
+            <button id="logoutButton">Logout</button>
+        </div>
+
+        <div id="shortcuts"></div>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

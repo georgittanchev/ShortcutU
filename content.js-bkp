@@ -1,0 +1,69 @@
+console.log('Content script loaded:', chrome.runtime.getURL('content.js'));
+
+let inMemoryShortcuts = [];
+
+function expandShortcut(text, cursorPosition) {
+    const beforeCursor = text.slice(0, cursorPosition);
+    const afterCursor = text.slice(cursorPosition);
+    const words = beforeCursor.split(/\s/);
+    const lastWord = words[words.length - 1];
+    if (lastWord.startsWith(':')) {
+        const shortcutText = lastWord.slice(1);
+        const matchedShortcut = inMemoryShortcuts.find(s => s.shortcut === shortcutText);
+        if (matchedShortcut) {
+            return {
+                expansion: matchedShortcut.expansion,
+                text: beforeCursor,
+                afterCursor: afterCursor,
+                lastWord: lastWord
+            };
+        }
+    }
+    return null;
+}
+
+function applyExpansion(input, expansion) {
+    const { text, afterCursor, lastWord } = input;
+    const newBeforeCursor = text.slice(0, -lastWord.length) + expansion;
+    return {
+        text: newBeforeCursor + afterCursor,
+        cursorPosition: newBeforeCursor.length
+    };
+}
+
+function handleInput(e) {
+    const expansionResult = expandShortcut(e.target.value, e.target.selectionStart);
+    if (expansionResult) {
+        const result = applyExpansion(expansionResult, expansionResult.expansion);
+        e.target.value = result.text;
+        e.target.selectionStart = e.target.selectionEnd = result.cursorPosition;
+    }
+}
+
+document.addEventListener('input', handleInput);
+
+function loadShortcuts() {
+    chrome.storage.local.get(['cachedShortcuts', 'user_id'], (data) => {
+        if (data.cachedShortcuts) {
+            inMemoryShortcuts = data.cachedShortcuts;
+        } else {
+            chrome.runtime.sendMessage({ action: 'getShortcuts', userId: data.user_id || 1 }, response => {
+                if (response.success) {
+                    inMemoryShortcuts = response.data;
+                }
+            });
+        }
+    });
+}
+
+loadShortcuts();
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'shortcutsUpdated') {
+        inMemoryShortcuts = request.shortcuts;
+    }
+});
+
+window.onerror = function (message, source, lineno, colno, error) {
+    console.error('Error in content script:', message, 'at', source, lineno, colno, error);
+};

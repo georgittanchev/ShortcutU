@@ -1,0 +1,29 @@
+{
+    "manifest_version": 3,
+    "name": "Text Shortcut Extension",
+    "version": "1.0",
+    "description": "Autofill text using custom shortcuts",
+    "permissions": [
+        "storage",
+        "activeTab"
+    ],
+    "host_permissions": [
+        "https://shortcuts.advokati-bg.com:3222/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["content.js"]
+        }
+    ],
+    "options_page": "options.html",
+    "action": {
+        "default_icon": {
+            "128": "icon.png"
+        },
+        "default_title": "Text Shortcut Extension"
+    }
+}

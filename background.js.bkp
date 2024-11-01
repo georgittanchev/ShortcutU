@@ -1,0 +1,191 @@
+console.log('Background script loaded');
+
+// Use self instead of window in service workers
+self.oninstall = (event) => {
+    console.log('Extension installed');
+};
+
+self.onactivate = (event) => {
+    console.log('Extension activated');
+};
+
+function verifyToken(token) {
+    return fetch('https://shortcuts.advokati-bg.com:3222/verifyToken', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    }).then(response => response.ok);
+}
+
+function prefetchShortcuts() {
+    chrome.storage.local.get(['token', 'user_id'], ({ token, user_id }) => {
+        if (token && user_id) {
+            fetch(`https://shortcuts.advokati-bg.com:3222/getShortcuts/${user_id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    chrome.storage.local.set({ cachedShortcuts: data });
+                    // Notify all tabs that shortcuts have been updated
+                    chrome.tabs.query({}, (tabs) => {
+                        tabs.forEach(tab => {
+                            chrome.tabs.sendMessage(tab.id, { action: 'shortcutsUpdated', shortcuts: data });
+                        });
+                    });
+                })
+                .catch(error => console.error('Prefetch error:', error));
+        }
+    });
+}
+
+// Call prefetchShortcuts when the extension starts
+self.onactivate = (event) => {
+    console.log('Extension activated');
+    prefetchShortcuts();
+};
+
+// Set up periodic prefetch (e.g., every 6 hours)
+setInterval(prefetchShortcuts, 6 * 60 * 60 * 1000);
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('Message received in background:', request);
+    if (request.action === 'getShortcuts') {
+        chrome.storage.local.get('token', ({ token }) => {
+            if (!token) {
+                sendResponse({ success: false, error: 'Not authenticated' });
+                return;
+            }
+            verifyToken(token).then(isValid => {
+                if (!isValid) {
+                    chrome.storage.local.remove('token');
+                    sendResponse({ success: false, error: 'Token expired' });
+                    return;
+                }
+                fetch(`https://shortcuts.advokati-bg.com:3222/getShortcuts/${request.userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        chrome.storage.local.set({ cachedShortcuts: data });
+                        sendResponse({ success: true, data });
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        sendResponse({ success: false, error: error.message });
+                    });
+            });
+        });
+        return true;  // Indicates we will send a response asynchronously
+    } else if (request.action === 'addShortcut') {
+        chrome.storage.local.get('token', ({ token }) => {
+            if (!token) {
+                sendResponse({ success: false, error: 'Not authenticated' });
+                return;
+            }
+            fetch('https://shortcuts.advokati-bg.com:3222/addShortcut', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(request.shortcutData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    prefetchShortcuts();  // Update cache after adding a shortcut
+                    sendResponse({ success: true, data });
+                })
+                .catch(error => sendResponse({ success: false, error: error.message }));
+        });
+        return true;  // Indicates we will send a response asynchronously
+    } else if (request.action === 'updateShortcut') {
+        chrome.storage.local.get('token', ({ token }) => {
+            if (!token) {
+                sendResponse({ success: false, error: 'Not authenticated' });
+                return;
+            }
+            fetch('https://shortcuts.advokati-bg.com:3222/updateShortcut', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(request.shortcutData)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    prefetchShortcuts();  // Update cache after updating a shortcut
+                    sendResponse({ success: true, data });
+                })
+                .catch(error => {
+                    console.error('Update shortcut error:', error);
+                    sendResponse({ success: false, error: error.message });
+                });
+        });
+        return true;  // Indicates we will send a response asynchronously
+    } else if (request.action === 'deleteShortcut') {
+        chrome.storage.local.get('token', ({ token }) => {
+            if (!token) {
+                sendResponse({ success: false, error: 'Not authenticated' });
+                return;
+            }
+            fetch(`https://shortcuts.advokati-bg.com:3222/deleteShortcut/${request.shortcutId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    prefetchShortcuts();  // Update cache after deleting a shortcut
+                    sendResponse({ success: true, data });
+                })
+                .catch(error => sendResponse({ success: false, error: error.message }));
+        });
+        return true;  // Indicates we will send a response asynchronously
+    } else if (request.action === 'login') {
+        console.log('Login request received in background script');
+        fetch('https://shortcuts.advokati-bg.com:3222/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request.credentials)
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Login response from server:', data);
+                if (data.token) {
+                    chrome.storage.local.set({ token: data.token }, () => {
+                        console.log('Token saved to storage');
+                        sendResponse({ success: true, token: data.token });
+                    });
+                } else {
+                    console.error('Login failed, no token received');
+                    sendResponse({ success: false, error: 'Login failed' });
+                }
+            })
+            .catch(error => {
+                console.error('Login fetch error:', error);
+                sendResponse({ success: false, error: error.message });
+            });
+        return true;  // Indicates we will send a response asynchronously
+    }
+});
