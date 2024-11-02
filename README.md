@@ -133,10 +133,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Attribution
 
-When using or distributing this software, please include the following attribution:
-
-"ShortcutU by tanchev.net"
+Please include the appropriate attribution to this GitHub repo when using or distributing this software.
 
 ---
 
-For more information or support, please open an issue on the GitHub repository.
+Please open an issue on the GitHub repository for more information or support.
