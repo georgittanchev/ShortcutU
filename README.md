@@ -129,7 +129,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2023 Georgi Tanchev (tanchev.net)
+
+## Attribution
+
+When using or distributing this software, please include the following attribution:
+
+"ShortcutU by Georgi Tanchev (tanchev.net)"
 
 ---
 
