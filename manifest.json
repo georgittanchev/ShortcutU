@@ -20,6 +20,10 @@
         }
     ],
     "options_page": "options.html",
+    "web_accessible_resources": [{
+        "resources": ["styles.css", "lib/*"],
+        "matches": ["<all_urls>"]
+    }],
     "action": {
         "default_icon": {
             "128": "icon.png"
