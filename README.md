@@ -131,8 +131,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-Copyright tanchev.net
-
 ## Attribution
 
 When using or distributing this software, please include the following attribution:
