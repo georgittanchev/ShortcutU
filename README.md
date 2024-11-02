@@ -37,7 +37,7 @@ The server is built with Node.js and uses MySQL for data storage. Follow these s
    ```
 
 4. Set up your MySQL database:
-   - Create a new database named `advokati_shortcuts`
+   - Create a new database named `shortcutu`
    - Create a user with access to this database
    - Update the database connection details in `server.js`:
      ```javascript
@@ -45,7 +45,7 @@ The server is built with Node.js and uses MySQL for data storage. Follow these s
        host: 'localhost',
        user: 'your_mysql_username',
        password: 'your_mysql_password',
-       database: 'advokati_shortcuts',
+       database: 'shortcutu',
        connectionLimit: 10
      });
      ```
@@ -66,12 +66,31 @@ The server is built with Node.js and uses MySQL for data storage. Follow these s
    const JWT_SECRET = 'your_secure_random_key';
    ```
 
-7. Start the server:
+7. Create the necessary database tables using the following SQL queries:
+   ```sql
+   CREATE TABLE users (
+     id INT AUTO_INCREMENT PRIMARY KEY,
+     username VARCHAR(255) NOT NULL UNIQUE,
+     password VARCHAR(255) NOT NULL,
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+
+   CREATE TABLE shortcuts (
+     id INT AUTO_INCREMENT PRIMARY KEY,
+     user_id INT NOT NULL,
+     shortcut VARCHAR(255) NOT NULL,
+     expansion TEXT NOT NULL,
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+   );
+   ```
+
+8. Start the server:
    ```
    node server.js
    ```
 
-8. The server should now be running on port 3222 (or the port you specified).
+9. The server should now be running on port 3222 (or the port you specified).
 
 ## Usage
 

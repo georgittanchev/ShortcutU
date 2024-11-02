@@ -21,9 +21,9 @@ const JWT_SECRET = 'BJH03C89x2BNJ3Ie'; // Replace with a secure, randomly genera
 
 const pool = mysql.createPool({
   host: 'localhost',
-  user: 'advokati_shortcuts',
-  password: 'advokati_shortcuts',
-  database: 'advokati_shortcuts',
+  user: 'shortcutu',
+  password: 'shortcutu',
+  database: 'shortcutu',
   connectionLimit: 10
 });
 

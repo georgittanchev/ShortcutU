@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Text Shortcut Extension",
+    "name": "ShortcutU",
     "version": "1.0",
     "description": "Autofill text using custom shortcuts",
     "permissions": [
@@ -28,6 +28,6 @@
         "default_icon": {
             "128": "icon.png"
         },
-        "default_title": "Text Shortcut Extension"
+        "default_title": "ShortcutU"
     }
 }
