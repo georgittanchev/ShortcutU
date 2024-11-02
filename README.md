@@ -27,7 +27,7 @@ The server is built with Node.js and uses MySQL for data storage. Follow these s
 
 2. Clone the repository on your server:
    ```
-   git clone https://github.com/yourusername/shortcutu-app.git
+   git clone [https://github.com/yourusername/shortcutu-app.git](https://github.com/georgittanchev/ShortcutU.git)
    cd shortcutu-app
    ```
 
