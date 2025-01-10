@@ -21,9 +21,9 @@ const JWT_SECRET = 'BJH03C89x2BNJ3Ie'; // Replace with a secure, randomly genera
 
 const pool = mysql.createPool({
   host: 'localhost',
-  user: 'shortcutu',
-  password: 'shortcutu',
-  database: 'shortcutu',
+  user: 'advokati_shortcuts',
+  password: 'advokati_shortcuts',
+  database: 'advokati_shortcuts',
   connectionLimit: 10
 });
 
@@ -46,41 +46,100 @@ function authenticateToken(req, res, next) {
   });
 }
 
-app.post('/login', (req, res) => {
-  console.log('Login request received:', req.body);
-  const { username, password } = req.body;
-  if (!username || !password) {
-    console.log('Missing username or password');
-    return res.status(400).json({ error: 'Username and password are required' });
-  }
-  const query = 'SELECT * FROM users WHERE username = ?';
-  pool.query(query, [username], async (err, results) => {
-    if (err) {
-      console.error('Database error:', err);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-    console.log('Query results:', results);
-    if (results.length === 0) {
-      console.log('User not found');
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    const user = results[0];
-    try {
-      console.log('Stored hashed password:', user.password);
-      const validPassword = await bcrypt.compare(password, user.password);
-      console.log('Password validation result:', validPassword);
-      if (!validPassword) {
-        console.log('Invalid password');
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-      const token = jwt.sign({ id: user.id }, JWT_SECRET);
-      console.log('Login successful, token generated:', token);
-      res.json({ token });
-    } catch (bcryptError) {
-      console.error('Bcrypt error:', bcryptError);
-      res.status(500).json({ error: 'Error validating password' });
-    }
+// Enhanced login endpoint with better error handling and logging
+app.post('/login', async (req, res) => {
+  console.log('Login request received:', { 
+    username: req.body?.username ? '(provided)' : '(missing)',
+    password: req.body?.password ? '(provided)' : '(missing)',
+    headers: req.headers
   });
+
+  try {
+    // Input validation
+    const { username, password } = req.body;
+    if (!username || !password) {
+      console.log('Missing credentials:', { username: !!username, password: !!password });
+      return res.status(400).json({ 
+        error: 'Username and password are required',
+        details: 'Both fields must be provided'
+      });
+    }
+
+    // Database query with timeout
+    const query = 'SELECT * FROM users WHERE username = ?';
+    const queryPromise = new Promise((resolve, reject) => {
+      pool.query(query, [username], (err, results) => {
+        if (err) {
+          console.error('Database query error:', err);
+          reject(new Error('Database error'));
+          return;
+        }
+        resolve(results);
+      });
+    });
+
+    // Add timeout to query
+    const results = await Promise.race([
+      queryPromise,
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database timeout')), 5000)
+      )
+    ]);
+
+    console.log('Query completed. Results found:', results.length > 0);
+
+    if (results.length === 0) {
+      console.log('No user found for username:', username);
+      return res.status(401).json({ 
+        error: 'Invalid credentials',
+        details: 'User not found'
+      });
+    }
+
+    const user = results[0];
+
+    // Password validation with timeout
+    const validationPromise = bcrypt.compare(password, user.password);
+    const isValidPassword = await Promise.race([
+      validationPromise,
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Password validation timeout')), 5000)
+      )
+    ]);
+
+    console.log('Password validation completed:', isValidPassword);
+
+    if (!isValidPassword) {
+      return res.status(401).json({ 
+        error: 'Invalid credentials',
+        details: 'Incorrect password'
+      });
+    }
+
+    // Generate JWT
+    const token = jwt.sign({ 
+      id: user.id,
+      username: user.username,
+      iat: Math.floor(Date.now() / 1000)
+    }, JWT_SECRET, { 
+      expiresIn: '24h'
+    });
+
+    // Send successful response
+    console.log('Login successful for user:', username);
+    res.json({ 
+      token,
+      user_id: user.id,
+      message: 'Login successful'
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
 });
 
 app.post('/addShortcut', authenticateToken, (req, res) => {
@@ -162,7 +221,11 @@ const PORT = process.env.PORT || 3222;
 const options = {
   key: fs.readFileSync('key.key'),
   cert: fs.readFileSync('crt.crt'),
-  ca: fs.readFileSync('r11.pem')
+  ca: [
+    fs.readFileSync('chain.pem'),
+    fs.readFileSync('isrgrootx1.pem'),
+    fs.readFileSync('r10.pem')
+  ]
 };
 
 https.createServer(options, app).listen(PORT, () => {

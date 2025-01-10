@@ -223,36 +223,86 @@ const checkLoginStatus = () => {
 
 const login = async () => {
   setLoading(true);
+  elements.loginButton.disabled = true;
+  
   try {
-    const response = await new Promise((resolve, reject) => {
+    // Validate input
+    const username = elements.username.value.trim();
+    const password = elements.password.value;
+    
+    if (!username || !password) {
+      showToast("Please enter both username and password", "error");
+      return;
+    }
+
+    // Attempt login with timeout
+    const loginPromise = new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error("Login request timed out"));
+      }, 10000);
+
       chrome.runtime.sendMessage(
         {
           action: "login",
-          credentials: {
-            username: elements.username.value,
-            password: elements.password.value,
-          },
+          credentials: { username, password },
         },
         (response) => {
+          clearTimeout(timeoutId);
+          
           if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(response);
+            console.error("Chrome runtime error:", chrome.runtime.lastError);
+            reject(new Error("Connection error: " + chrome.runtime.lastError.message));
+            return;
           }
+          
+          if (!response) {
+            reject(new Error("No response received from server"));
+            return;
+          }
+          
+          resolve(response);
         }
       );
     });
 
-    if (response && response.success) {
-      showToast("Login successful");
-      checkLoginStatus();
-    } else {
-      throw new Error(response?.error || "Login failed");
+    const response = await loginPromise;
+    
+    if (!response.success) {
+      throw new Error(response.error || response.details || "Login failed");
     }
+
+    // Store credentials and check status
+    await new Promise((resolve) => {
+      chrome.storage.local.set(
+        {
+          token: response.token,
+          user_id: response.user_id,
+          lastLogin: Date.now(),
+        },
+        resolve
+      );
+    });
+
+    showToast("Login successful");
+    checkLoginStatus();
+    
   } catch (error) {
-    showToast(error.message, "error");
+    console.error("Login error:", error);
+    
+    let errorMessage = "Login failed: ";
+    if (error.message.includes("Failed to fetch")) {
+      errorMessage += "Cannot connect to server. Please check your internet connection.";
+    } else if (error.message.includes("timeout")) {
+      errorMessage += "Request timed out. Please try again.";
+    } else {
+      errorMessage += error.message;
+    }
+    
+    showToast(errorMessage, "error");
+    
   } finally {
     setLoading(false);
+    elements.loginButton.disabled = false;
   }
 };
 
