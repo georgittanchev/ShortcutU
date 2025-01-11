@@ -64,22 +64,29 @@ const handleInput = (e) => {
   const lineStartPosition = currentPosition;
   const positionInLine = cursorPosition - lineStartPosition;
 
-  const lineStartShortcut = currentLine.match(/^:?\w+/);
-  const cursorShortcut = currentLine.slice(0, positionInLine).match(/(?:^|\s):?\w+$/);
+  // Get the text before the cursor to look for shortcuts
+const textBeforeCursor = currentLine.slice(0, positionInLine);
+// Look for any word characters preceded by optional colon anywhere in text
+const shortcutMatch = textBeforeCursor.match(/(?::?\w+)$/);
 
-  let matchingShortcut = null;
-  let shortcutStartPos = 0;
-  let shortcutEndPos = 0;
+let matchingShortcut = null;
+let shortcutStartPos = 0;
+let shortcutEndPos = 0;
 
-  if (lineStartShortcut) {
-    matchingShortcut = shortcuts.find(s => s.shortcut === lineStartShortcut[0] || s.shortcut === lineStartShortcut[0].slice(1));
-    shortcutStartPos = lineStartPosition;
-    shortcutEndPos = lineStartPosition + lineStartShortcut[0].length;
-  } else if (cursorShortcut) {
-    matchingShortcut = shortcuts.find(s => s.shortcut === cursorShortcut[0].trim() || s.shortcut === cursorShortcut[0].trim().slice(1));
-    shortcutStartPos = cursorPosition - cursorShortcut[0].trim().length;
-    shortcutEndPos = cursorPosition;
+if (shortcutMatch) {
+  const potentialShortcut = shortcutMatch[0];
+  // Try both with and without colon prefix
+  matchingShortcut = shortcuts.find(s => 
+    s.shortcut === potentialShortcut || 
+    s.shortcut === potentialShortcut.slice(1) ||
+    `:${s.shortcut}` === potentialShortcut
+  );
+
+  if (matchingShortcut) {
+    shortcutEndPos = lineStartPosition + positionInLine;
+    shortcutStartPos = shortcutEndPos - potentialShortcut.length;
   }
+}
 
   if (matchingShortcut && (shortcutEndPos === text.length || /[\s\n]/.test(text[shortcutEndPos]))) {
     if (el.tagName === "IFRAME") {
