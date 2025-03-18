@@ -17,7 +17,7 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
-const JWT_SECRET = 'BJH03C89x2BNJ3Ie'; // Replace with a secure, randomly generated key
+const JWT_SECRET = ''; 
 
 const pool = mysql.createPool({
   host: 'localhost',
