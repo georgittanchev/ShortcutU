@@ -17,13 +17,18 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
-const JWT_SECRET = ''; 
+// Add a simple root route for connection testing
+app.get('/', (req, res) => {
+  res.json({ message: 'Shortcuts API is running' });
+});
+
+const JWT_SECRET = 'N0p@ss'; 
 
 const pool = mysql.createPool({
   host: 'localhost',
-  user: 'advokati_shortcuts',
-  password: 'advokati_shortcuts',
-  database: 'advokati_shortcuts',
+  user: 'zvez_short',
+  password: 'zvez_short',
+  database: 'zvez_short',
   connectionLimit: 10
 });
 

@@ -27,8 +27,8 @@ The server is built with Node.js and uses MySQL for data storage. Follow these s
 
 2. Clone the repository on your server:
    ```
-   git clone https://github.com/georgittanchev/ShortcutU.git
-   cd shortcutu-app
+   git clone https://github.com/yourusername/ShortcutU.git
+   cd ShortcutU
    ```
 
 3. Install the required dependencies:
@@ -37,7 +37,7 @@ The server is built with Node.js and uses MySQL for data storage. Follow these s
    ```
 
 4. Set up your MySQL database:
-   - Create a new database named `shortcutu`
+   - Create a new database for the application
    - Create a user with access to this database
    - Update the database connection details in `server.js`:
      ```javascript
@@ -45,7 +45,7 @@ The server is built with Node.js and uses MySQL for data storage. Follow these s
        host: 'localhost',
        user: 'your_mysql_username',
        password: 'your_mysql_password',
-       database: 'shortcutu',
+       database: 'your_database_name',
        connectionLimit: 10
      });
      ```
@@ -85,18 +85,26 @@ The server is built with Node.js and uses MySQL for data storage. Follow these s
    );
    ```
 
-8. Start the server:
+8. Create an initial user account:
+   ```sql
+   -- Generate a password hash using bcrypt (DO NOT use this example in production)
+   -- Example shows password hash for 'yourpassword'
+   INSERT INTO users (username, password) 
+   VALUES ('yourusername', '$2b$10$ExampleHashThatShouldBeGeneratedWithBcrypt');
+   ```
+
+9. Start the server:
    ```
    node server.js
    ```
 
-9. The server should now be running on port 3222 (or the port you specified).
+10. The server should now be running on port 3222 (or the port you specified).
 
 ## Usage
 
 1. After installing the Chrome extension and setting up the server, click on the ShortcutU icon in your Chrome toolbar.
 
-2. Log in using your credentials.
+2. Log in with the username and password you created in the database setup.
 
 3. Create new shortcuts by specifying a shortcut text and its expansion.
 
@@ -138,3 +146,111 @@ Please include the appropriate attribution to this GitHub repo when using or dis
 ---
 
 Please open an issue on the GitHub repository for more information or support.
+
+# Shortcuts Backend
+
+This is the backend server for the Shortcuts Chrome extension, allowing you to run it locally without needing a specific domain.
+
+## Setup Instructions
+
+### Prerequisites
+- Node.js (v12 or higher)
+- MySQL database
+
+### Database Setup
+1. Create a MySQL database for the application:
+```sql
+-- Replace with your own database name, username and password
+CREATE DATABASE your_database_name;
+CREATE USER 'your_username'@'localhost' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON your_database_name.* TO 'your_username'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+2. Import the database schema:
+```sql
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE shortcuts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  shortcut VARCHAR(100) NOT NULL,
+  expansion TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+3. Create a test user:
+```sql
+-- Password must be hashed using bcrypt
+-- This is just a placeholder. Generate your own hash in production
+INSERT INTO users (username, password) 
+VALUES ('yourusername', '$2b$10$GenerateAProperHashUsingBcrypt');
+```
+
+### Backend Setup
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Start the server:
+```bash
+# Development mode (runs HTTP server on localhost)
+npm start
+
+# Production mode (runs HTTPS server with certificates)
+NODE_ENV=production npm start
+```
+
+The server will run at:
+- Development: http://localhost:3222
+- Production: https://your-domain.com:3222
+
+### Environment Configuration
+You can customize the configuration by setting environment variables:
+
+```bash
+PORT=3222                    # Server port
+NODE_ENV=development         # 'development' or 'production'
+JWT_SECRET=your_secret_key   # Secret key for JWT (use a strong random value)
+DB_HOST=localhost            # Database host
+DB_USER=your_username        # Database user
+DB_PASSWORD=your_password    # Database password
+DB_NAME=your_database_name   # Database name
+```
+
+## Chrome Extension Configuration
+
+The Chrome extension is configured to work with both local development and production environments.
+
+To switch environments, edit the `manifest.json` file to update the host permissions:
+```json
+"host_permissions": [
+    "https://your-domain.com:3222/*"
+]
+```
+
+And update all URLs in background.js to point to your domain.
+
+## API Endpoints
+
+- `POST /login` - Authenticate user
+- `GET /getShortcuts/:user_id` - Get user's shortcuts
+- `POST /addShortcut` - Add a new shortcut
+- `PUT /updateShortcut` - Update an existing shortcut
+- `DELETE /deleteShortcut/:id` - Delete a shortcut
+- `POST /verifyToken` - Verify JWT token
+
+## Security Notes
+
+- Always use a strong, randomly generated JWT secret
+- HTTPS is required for production use
+- Store passwords using bcrypt hashing
+- Keep your server updated with security patches
