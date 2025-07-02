@@ -14,7 +14,7 @@ function prefetchShortcuts() {
     chrome.storage.local.get(["token", "user_id"], ({ token, user_id }) => {
       console.log("Storage data for prefetch:", { token: !!token, user_id });
       if (token && user_id) {
-        const url = `https://shortcuts.advokati-bg.com:3222/getShortcuts/${user_id}`;
+        const url = `https://shortcuts.tanchev.net:3222/getShortcuts/${user_id}`;
         console.log("Prefetch URL:", url);
 
         fetch(url, {
@@ -71,13 +71,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // First, try to check server availability
     console.log("Testing server connection...");
-    fetch("https://shortcuts.advokati-bg.com:3222/", {
+    fetch("https://shortcuts.tanchev.net:3222/", {
       method: "GET",
       mode: "no-cors", // Try with no-cors first
     })
       .then(() => {
         console.log("Server is reachable, proceeding with login");
-        return fetch("https://shortcuts.advokati-bg.com:3222/login", {
+        return fetch("https://shortcuts.tanchev.net:3222/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -136,7 +136,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
       }
 
-      fetch(`https://shortcuts.advokati-bg.com:3222/getShortcuts/${user_id}`, {
+      fetch(`https://shortcuts.tanchev.net:3222/getShortcuts/${user_id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -170,7 +170,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === "register") {
     console.log("Processing registration request...");
-    const API_URL = "https://shortcuts.advokati-bg.com:3222";
+    const API_URL = "https://shortcuts.tanchev.net:3222";
 
     const fetchOptions = {
       method: "POST",
@@ -241,7 +241,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       console.log("Sending shortcut data:", shortcutData);
 
-      fetch("https://shortcuts.advokati-bg.com:3222/addShortcut", {
+      fetch("https://shortcuts.tanchev.net:3222/addShortcut", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -301,7 +301,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       console.log("Sending update request with data:", shortcutData);
 
-      fetch("https://shortcuts.advokati-bg.com:3222/updateShortcut", {
+      fetch("https://shortcuts.tanchev.net:3222/updateShortcut", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -369,7 +369,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
 
       fetch(
-        `https://shortcuts.advokati-bg.com:3222/deleteShortcut/${request.shortcutId}?user_id=${user_id}`,
+        `https://shortcuts.tanchev.net:3222/deleteShortcut/${request.shortcutId}?user_id=${user_id}`,
         {
           method: "DELETE",
           headers: {
