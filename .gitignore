@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.sql
+!schema.sql
+*.key
+*.crt
+*.pem
+*.log
