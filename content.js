@@ -64,29 +64,33 @@ const handleInput = (e) => {
   const lineStartPosition = currentPosition;
   const positionInLine = cursorPosition - lineStartPosition;
 
-  // Get the text before the cursor to look for shortcuts
-const textBeforeCursor = currentLine.slice(0, positionInLine);
-// Look for any word characters preceded by optional colon anywhere in text
-const shortcutMatch = textBeforeCursor.match(/(?::?\w+)$/);
+  // Text between the start of the line and the cursor
+  const textBeforeCursor = currentLine.slice(0, positionInLine);
 
-let matchingShortcut = null;
-let shortcutStartPos = 0;
-let shortcutEndPos = 0;
-
-if (shortcutMatch) {
-  const potentialShortcut = shortcutMatch[0];
-  // Try both with and without colon prefix
-  matchingShortcut = shortcuts.find(s => 
-    s.shortcut === potentialShortcut || 
-    s.shortcut === potentialShortcut.slice(1) ||
-    `:${s.shortcut}` === potentialShortcut
-  );
-
-  if (matchingShortcut) {
-    shortcutEndPos = lineStartPosition + positionInLine;
-    shortcutStartPos = shortcutEndPos - potentialShortcut.length;
+  // A saved trigger matches when the text before the cursor ends with it and
+  // it starts at the beginning of the line or after whitespace. Any characters
+  // work (";thanks", ":cert", "->"); the old word-only regex never matched
+  // triggers with punctuation. Typing ":name" still finds a trigger saved as
+  // "name". If several triggers end at the cursor, the longest one wins.
+  const startsAtBoundary = (start) => start === 0 || /\s/.test(textBeforeCursor[start - 1]);
+  let matchingShortcut = null;
+  let typedLength = 0;
+  for (const s of shortcuts) {
+    if (!s || typeof s.shortcut !== "string" || !s.shortcut) continue;
+    for (const typed of [s.shortcut, `:${s.shortcut}`]) {
+      if (
+        typed.length > typedLength &&
+        textBeforeCursor.endsWith(typed) &&
+        startsAtBoundary(textBeforeCursor.length - typed.length)
+      ) {
+        matchingShortcut = s;
+        typedLength = typed.length;
+      }
+    }
   }
-}
+
+  const shortcutEndPos = lineStartPosition + positionInLine;
+  const shortcutStartPos = shortcutEndPos - typedLength;
 
   if (matchingShortcut && (shortcutEndPos === text.length || /[\s\n]/.test(text[shortcutEndPos]))) {
     if (el.tagName === "IFRAME") {

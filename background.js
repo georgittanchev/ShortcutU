@@ -62,6 +62,13 @@ function prefetchShortcuts() {
   });
 }
 
+// The toolbar icon and a fresh install both open the options page, where you
+// log in and manage shortcuts. There is no popup.
+chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === "install") chrome.runtime.openOptionsPage();
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Message received in background with action:", request?.action);
   console.log("Full message details:", request);

@@ -2,10 +2,24 @@
     "manifest_version": 3,
     "name": "ShortcutU",
     "version": "1.1",
-    "description": "Autofill text using custom shortcuts",
+    "description": "Type a short trigger, get your saved text. Text expander with sync; what you type stays in your browser.",
+    "homepage_url": "https://tanchev.net/shortcutu/",
+    "icons": {
+        "16": "icons/icon16.png",
+        "32": "icons/icon32.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "action": {
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "32": "icons/icon32.png",
+            "48": "icons/icon48.png"
+        },
+        "default_title": "ShortcutU"
+    },
     "permissions": [
-        "storage",
-        "activeTab"
+        "storage"
     ],
     "host_permissions": [
         "https://shortcuts.tanchev.net/*"
@@ -15,21 +29,13 @@
     },
     "content_scripts": [
         {
-            "matches": ["<all_urls>"],
-            "js": ["content.js"]
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
         }
     ],
-    "options_page": "options.html",
-    "homepage_url": "https://tanchev.net/shortcutu/",
-    "web_accessible_resources": [{
-        "resources": ["styles.css", "lib/*"],
-        "matches": ["<all_urls>"]
-    }],
-    "action": {
-        "default_icon": "icon.png",
-        "default_title": "ShortcutU"
-    },
-    "icons": {
-        "128": "icon.png"
-    }
+    "options_page": "options.html"
 }
