@@ -25,6 +25,7 @@ const elements = {
   registerButton: document.getElementById("registerButton"),
   showLoginLink: document.getElementById("showLoginLink"),
   showRegisterLink: document.getElementById("showRegisterLink"),
+  deleteAccountButton: document.getElementById("deleteAccountButton"),
 };
 
 // Utility Functions
@@ -180,6 +181,9 @@ const showModal = (
         expansion: modal.querySelector(".edit-expansion").value.trim(),
       };
     }
+    if (template === "deleteAccountModalTemplate") {
+      values = { password: modal.querySelector(".delete-account-password").value };
+    }
     await onConfirm(values);
     modal.remove();
   });
@@ -314,6 +318,45 @@ const logout = () => {
       grid.destroy();
       grid = null;
     }
+  });
+};
+
+const deleteAccount = () => {
+  showModal("deleteAccountModalTemplate", {
+    onConfirm: async (values) => {
+      if (!values || !values.password) {
+        showToast("Enter your password to delete the account", "error");
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await new Promise((resolve, reject) => {
+          chrome.runtime.sendMessage(
+            { action: "deleteAccount", password: values.password },
+            (response) => {
+              if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+              } else {
+                resolve(response);
+              }
+            }
+          );
+        });
+        if (!response || !response.success) {
+          throw new Error(response?.error || "Failed to delete the account");
+        }
+        if (grid) {
+          grid.destroy();
+          grid = null;
+        }
+        checkLoginStatus();
+        showToast("Your account and all shortcuts were deleted");
+      } catch (error) {
+        showToast(error.message, "error");
+      } finally {
+        setLoading(false);
+      }
+    },
   });
 };
 
@@ -632,6 +675,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Add event listeners for existing functionality
   elements.loginButton?.addEventListener("click", login);
   elements.logoutButton?.addEventListener("click", logout);
+  elements.deleteAccountButton?.addEventListener("click", deleteAccount);
   elements.addButton?.addEventListener("click", addShortcut);
 
   // Add event listeners for registration functionality

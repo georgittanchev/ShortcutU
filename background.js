@@ -364,6 +364,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.action === "deleteAccount") {
+    chrome.storage.local.get(["token"], ({ token }) => {
+      if (!token) {
+        sendResponse({ success: false, error: "Not authenticated" });
+        return;
+      }
+      fetch(`${API_URL}/deleteAccount`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password: request.password }),
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(
+              response.status === 401
+                ? "Wrong password"
+                : data.error || `Failed to delete the account: ${response.status}`
+            );
+          }
+          // Nothing of the account stays in the browser either.
+          chrome.storage.local.remove(["token", "user_id", "cachedShortcuts", "lastLogin"], () => {
+            sendResponse({ success: true });
+          });
+        })
+        .catch((error) => {
+          sendResponse({ success: false, error: error.message || "Failed to delete the account" });
+        });
+    });
+    return true;
+  }
+
   if (request.action === "deleteShortcut") {
     chrome.storage.local.get(["token", "user_id"], ({ token, user_id }) => {
       if (!token || !user_id) {

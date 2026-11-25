@@ -333,6 +333,26 @@
         box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
       }
 
+      .btn-outline-danger {
+        background: transparent;
+        color: var(--danger-color);
+        border: 1px solid var(--danger-color);
+      }
+
+      .btn-outline-danger:hover:not(:disabled) {
+        background-color: #fef2f2;
+      }
+
+      .small-print {
+        font-size: 13px;
+        color: #6b7280;
+        margin: 8px 0 0;
+      }
+
+      .small-print a {
+        color: var(--primary-color);
+      }
+
       /* Animations */
       @keyframes slideIn {
         from {
@@ -398,6 +418,9 @@
           <p class="text-center mt-4">
             Don't have an account? <a href="#" id="showRegisterLink">Register</a>
           </p>
+          <p class="small-print">
+            <a href="https://tanchev.net/shortcutu/privacy/" target="_blank" rel="noopener">Privacy policy</a>
+          </p>
         </form>
       </div>
 
@@ -420,6 +443,12 @@
             <label>Confirm Password</label>
             <input type="password" id="regConfirmPassword" required />
           </div>
+          <p class="small-print">
+            Your shortcuts are stored on the ShortcutU server so they sync between
+            your browsers. Read the
+            <a href="https://tanchev.net/shortcutu/privacy/" target="_blank" rel="noopener">privacy policy</a>
+            before registering.
+          </p>
           <button type="button" id="registerButton" class="btn btn-primary">
             Register
           </button>
@@ -462,6 +491,21 @@
         <!-- Shortcuts Grid -->
         <div class="grid" id="shortcuts">
           <!-- Shortcuts will be dynamically added here -->
+        </div>
+
+        <!-- Account -->
+        <div class="card">
+          <h2>Account</h2>
+          <p>
+            Deleting your account removes it and all your shortcuts from the
+            server for good. This can't be undone.
+          </p>
+          <button type="button" id="deleteAccountButton" class="btn btn-outline-danger">
+            Delete account
+          </button>
+          <p class="small-print">
+            <a href="https://tanchev.net/shortcutu/privacy/" target="_blank" rel="noopener">Privacy policy</a>
+          </p>
         </div>
       </div>
     </div>
@@ -506,6 +550,28 @@
           <div class="modal-footer">
             <button class="btn btn-primary modal-cancel">Cancel</button>
             <button class="btn btn-primary modal-confirm">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template id="deleteAccountModalTemplate">
+      <div class="modal-backdrop">
+        <div class="modal">
+          <div class="modal-header">
+            <h3 class="modal-title">Delete account</h3>
+          </div>
+          <p>
+            This deletes your account and every shortcut in it from the server.
+            It can't be undone. Enter your password to confirm.
+          </p>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" class="delete-account-password" autocomplete="current-password" />
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-primary modal-cancel">Cancel</button>
+            <button class="btn btn-danger modal-confirm">Delete my account</button>
           </div>
         </div>
       </div>

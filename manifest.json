@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "ShortcutU",
-    "version": "1.0",
+    "version": "1.1",
     "description": "Autofill text using custom shortcuts",
     "permissions": [
         "storage",
@@ -20,6 +20,7 @@
         }
     ],
     "options_page": "options.html",
+    "homepage_url": "https://tanchev.net/shortcutu/",
     "web_accessible_resources": [{
         "resources": ["styles.css", "lib/*"],
         "matches": ["<all_urls>"]

@@ -92,6 +92,10 @@ The extension uses the `POST` forms: the OWASP ModSecurity Core Rule Set, enable
 
 Tokens expire after 24 hours.
 
+## Privacy
+
+The hosted server's privacy policy is at <https://tanchev.net/shortcutu/privacy/>. In short: the server stores your account and your shortcuts; what you type on websites is matched in the browser and never sent anywhere. Users can delete their account and all shortcuts from the options page (Account → Delete account). If you run your own server for other people, you need your own policy.
+
 ## Security notes
 
 - Snippets are stored as plain text in MySQL. Don't keep passwords or API keys in them.
