@@ -88,6 +88,7 @@ All shortcut routes need `Authorization: Bearer <token>` from `/login` and act o
 
 The extension uses the `POST` forms: the OWASP ModSecurity Core Rule Set, enabled by default on CyberPanel and cPanel servers, blocks `PUT` and `DELETE` with a 403.
 | `POST` | `/verifyToken` | 200 if the token is valid |
+| `POST` | `/deleteAccount` | `{ password }`: deletes the account and all its shortcuts |
 
 Tokens expire after 24 hours.
 
@@ -96,6 +97,18 @@ Tokens expire after 24 hours.
 - Snippets are stored as plain text in MySQL. Don't keep passwords or API keys in them.
 - The content script runs on all pages so it can expand text anywhere. It only reads the field you're typing in, and only talks to your own server.
 - Never commit `.env`, certificates or database dumps. The `.gitignore` covers them.
+
+## Limits
+
+Built for a server that accepts public sign-ups:
+
+- Logins: 20 failed attempts per IP and 10 per username in 15 minutes (successful logins don't count).
+- Sign-ups: 5 per IP and 50 for the whole server per hour.
+- Everything else: 300 requests per minute per IP.
+- A shortcut trigger is at most 100 characters, an expansion at most 20,000, and an account holds at most 2,000 shortcuts.
+- Passwords are 8 characters to 72 bytes (bcrypt ignores anything after 72 bytes).
+
+The username and server-wide limits exist because client IPs come from a proxy header. A proxy can be tricked into passing through a value the client made up, so no limit relies on the IP alone. Limits are kept in memory and reset when the server restarts.
 
 ## Third-party code
 

@@ -20,6 +20,7 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const NodeCache = require('node-cache');
+const rateLimit = require('express-rate-limit');
 const http = require('http');
 const https = require('https');
 
@@ -33,6 +34,37 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
 }
 
 const app = express();
+app.disable('x-powered-by');
+// Behind a reverse proxy on the same machine: take the client IP from
+// X-Forwarded-For only when the request comes from loopback.
+app.set('trust proxy', 'loopback');
+
+// Limits for a server that accepts public sign-ups. All per client IP.
+const LIMITS = {
+  shortcutLength: 100,          // characters in a trigger
+  expansionLength: 20000,       // characters in an expansion
+  shortcutsPerUser: 2000,
+  passwordBytes: 72             // bcrypt ignores everything after 72 bytes
+};
+const jsonLimit = (windowMs, max, error, extra = {}) => rateLimit({
+  windowMs, limit: max, standardHeaders: 'draft-7', legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({ error }),
+  ...extra
+});
+// Client IPs come from a proxy header, which a proxy can be tricked into
+// passing through from the client. So every IP limit has a second limit that
+// does not depend on the IP: per username for logins, server-wide for sign-ups.
+const failedOnly = { skipSuccessfulRequests: true };
+const loginLimiter = jsonLimit(15 * 60 * 1000, 20, 'Too many login attempts, try again in 15 minutes', failedOnly);
+const loginUserLimiter = jsonLimit(15 * 60 * 1000, 10, 'Too many login attempts for this account, try again in 15 minutes', {
+  ...failedOnly,
+  keyGenerator: (req) => `user:${String((req.body && req.body.username) || '').toLowerCase().slice(0, 100)}`
+});
+const registerLimiter = jsonLimit(60 * 60 * 1000, 5, 'Too many sign-ups from this address, try again later');
+const registerGlobalLimiter = jsonLimit(60 * 60 * 1000, 50, 'Sign-ups are paused for a while, try again later', {
+  keyGenerator: () => 'register:all'
+});
+const apiLimiter = jsonLimit(60 * 1000, 300, 'Too many requests, slow down');
 // The extension sends a Bearer token, not cookies, so credentials are not
 // needed. CORS_ORIGIN can limit which origins may call the API.
 app.use(cors({
@@ -40,7 +72,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(bodyParser.json({ limit: '1mb' }));
+app.use(bodyParser.json({ limit: '100kb' }));
+app.use(apiLimiter);
 
 // Root route for connection testing
 app.get('/', (req, res) => {
@@ -71,9 +104,26 @@ function authenticateToken(req, res, next) {
     if (err) {
       return res.sendStatus(403);
     }
-    req.user = user;
-    next();
+    pool.query('SELECT id FROM users WHERE id = ?', [user.id], (dbErr, rows) => {
+      if (dbErr) return res.status(500).json({ error: 'Database error' });
+      if (rows.length === 0) return res.sendStatus(401);
+      req.user = user;
+      next();
+    });
   });
+}
+
+function validShortcut(shortcut, expansion) {
+  if (typeof shortcut !== 'string' || typeof expansion !== 'string' || !shortcut.trim()) {
+    return 'shortcut and expansion are required';
+  }
+  if (shortcut.length > LIMITS.shortcutLength) {
+    return `A shortcut can be at most ${LIMITS.shortcutLength} characters`;
+  }
+  if (expansion.length > LIMITS.expansionLength) {
+    return `An expansion can be at most ${LIMITS.expansionLength} characters`;
+  }
+  return null;
 }
 
 function withTimeout(promise, ms, message) {
@@ -83,7 +133,7 @@ function withTimeout(promise, ms, message) {
   ]);
 }
 
-app.post('/login', async (req, res) => {
+app.post('/login', loginLimiter, loginUserLimiter, async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (typeof username !== 'string' || typeof password !== 'string' || !username || !password) {
@@ -125,7 +175,7 @@ app.post('/login', async (req, res) => {
 
 // Sign-up from the extension's registration form. Off unless
 // ALLOW_REGISTRATION=true, so a private server doesn't accept strangers.
-app.post('/register', async (req, res) => {
+app.post('/register', registerGlobalLimiter, registerLimiter, async (req, res) => {
   if (process.env.ALLOW_REGISTRATION !== 'true') {
     return res.status(403).json({ error: 'Registration is disabled on this server' });
   }
@@ -139,6 +189,9 @@ app.post('/register', async (req, res) => {
     }
     if (typeof password !== 'string' || password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+    if (Buffer.byteLength(password, 'utf8') > LIMITS.passwordBytes) {
+      return res.status(400).json({ error: `Password can be at most ${LIMITS.passwordBytes} bytes` });
     }
 
     const hash = await bcrypt.hash(password, 12);
@@ -171,17 +224,27 @@ app.post('/register', async (req, res) => {
 app.post('/addShortcut', authenticateToken, (req, res) => {
   const user_id = req.user.id;
   const { shortcut, expansion } = req.body || {};
-  if (typeof shortcut !== 'string' || typeof expansion !== 'string' || !shortcut) {
-    return res.status(400).json({ error: 'shortcut and expansion are required' });
+  const invalid = validShortcut(shortcut, expansion);
+  if (invalid) {
+    return res.status(400).json({ error: invalid });
   }
-  const query = 'INSERT INTO shortcuts (user_id, shortcut, expansion) VALUES (?, ?, ?)';
-  pool.query(query, [user_id, shortcut, expansion], (err, result) => {
-    if (err) {
-      console.error('Database error:', err.message);
+  pool.query('SELECT COUNT(*) AS n FROM shortcuts WHERE user_id = ?', [user_id], (countErr, rows) => {
+    if (countErr) {
+      console.error('Database error:', countErr.message);
       return res.status(500).json({ error: 'Database error' });
     }
-    shortcutCache.del(`shortcuts_${user_id}`);
-    res.json({ message: 'Shortcut added successfully', id: result.insertId });
+    if (rows[0].n >= LIMITS.shortcutsPerUser) {
+      return res.status(400).json({ error: `You can have at most ${LIMITS.shortcutsPerUser} shortcuts` });
+    }
+    const query = 'INSERT INTO shortcuts (user_id, shortcut, expansion) VALUES (?, ?, ?)';
+    pool.query(query, [user_id, shortcut, expansion], (err, result) => {
+      if (err) {
+        console.error('Database error:', err.message);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      shortcutCache.del(`shortcuts_${user_id}`);
+      res.json({ message: 'Shortcut added successfully', id: result.insertId });
+    });
   });
 });
 
@@ -210,8 +273,9 @@ app.get('/getShortcuts/:user_id', authenticateToken, (req, res) => {
 function updateShortcut(req, res) {
   const user_id = req.user.id;
   const { id, shortcut, expansion } = req.body || {};
-  if (!id || typeof shortcut !== 'string' || typeof expansion !== 'string' || !shortcut) {
-    return res.status(400).json({ error: 'id, shortcut and expansion are required' });
+  const invalid = !id ? 'id, shortcut and expansion are required' : validShortcut(shortcut, expansion);
+  if (invalid) {
+    return res.status(400).json({ error: invalid });
   }
   const query = 'UPDATE shortcuts SET shortcut = ?, expansion = ? WHERE id = ? AND user_id = ?';
   pool.query(query, [shortcut, expansion, id, user_id], (err, result) => {
@@ -247,6 +311,35 @@ function deleteShortcut(req, res) {
 }
 app.delete('/deleteShortcut/:id', authenticateToken, deleteShortcut);
 app.post('/deleteShortcut/:id', authenticateToken, deleteShortcut);
+
+// Delete the account and every shortcut in it. Needs the password again so a
+// stolen token alone can't wipe an account.
+app.post('/deleteAccount', loginLimiter, authenticateToken, async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (typeof password !== 'string' || !password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+    const user_id = req.user.id;
+    const rows = await new Promise((resolve, reject) => {
+      pool.query('SELECT password FROM users WHERE id = ?', [user_id], (err, r) => (err ? reject(err) : resolve(r)));
+    });
+    if (rows.length === 0 || !(await bcrypt.compare(password, rows[0].password))) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    await new Promise((resolve, reject) => {
+      pool.query('DELETE FROM shortcuts WHERE user_id = ?', [user_id], (err) => (err ? reject(err) : resolve()));
+    });
+    await new Promise((resolve, reject) => {
+      pool.query('DELETE FROM users WHERE id = ?', [user_id], (err) => (err ? reject(err) : resolve()));
+    });
+    shortcutCache.del(`shortcuts_${user_id}`);
+    res.json({ message: 'Account and all shortcuts deleted' });
+  } catch (error) {
+    console.error('Delete account error:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 app.post('/verifyToken', authenticateToken, (req, res) => {
   res.sendStatus(200);
