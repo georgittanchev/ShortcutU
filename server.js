@@ -204,7 +204,10 @@ app.get('/getShortcuts/:user_id', authenticateToken, (req, res) => {
   });
 });
 
-app.put('/updateShortcut', authenticateToken, (req, res) => {
+// PUT/DELETE are kept for API clients, but the extension uses the POST aliases:
+// the OWASP Core Rule Set (default ModSecurity on CyberPanel/cPanel hosts) only
+// allows GET, HEAD, POST and OPTIONS and answers PUT/DELETE with a 403.
+function updateShortcut(req, res) {
   const user_id = req.user.id;
   const { id, shortcut, expansion } = req.body || {};
   if (!id || typeof shortcut !== 'string' || typeof expansion !== 'string' || !shortcut) {
@@ -222,9 +225,11 @@ app.put('/updateShortcut', authenticateToken, (req, res) => {
     shortcutCache.del(`shortcuts_${user_id}`);
     res.json({ message: 'Shortcut updated successfully' });
   });
-});
+}
+app.put('/updateShortcut', authenticateToken, updateShortcut);
+app.post('/updateShortcut', authenticateToken, updateShortcut);
 
-app.delete('/deleteShortcut/:id', authenticateToken, (req, res) => {
+function deleteShortcut(req, res) {
   const { id } = req.params;
   const user_id = req.user.id;
   const query = 'DELETE FROM shortcuts WHERE id = ? AND user_id = ?';
@@ -239,7 +244,9 @@ app.delete('/deleteShortcut/:id', authenticateToken, (req, res) => {
     shortcutCache.del(`shortcuts_${user_id}`);
     res.json({ message: 'Shortcut deleted successfully' });
   });
-});
+}
+app.delete('/deleteShortcut/:id', authenticateToken, deleteShortcut);
+app.post('/deleteShortcut/:id', authenticateToken, deleteShortcut);
 
 app.post('/verifyToken', authenticateToken, (req, res) => {
   res.sendStatus(200);

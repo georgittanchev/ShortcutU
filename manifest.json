@@ -8,7 +8,7 @@
         "activeTab"
     ],
     "host_permissions": [
-        "https://shortcuts.tanchev.net:3222/*"
+        "https://shortcuts.tanchev.net/*"
     ],
     "background": {
         "service_worker": "background.js"

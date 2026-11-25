@@ -1,6 +1,6 @@
 // Your ShortcutU server. Change this (and host_permissions in manifest.json)
 // when you host the API yourself.
-const API_URL = "https://shortcuts.tanchev.net:3222";
+const API_URL = "https://shortcuts.tanchev.net";
 
 console.log("Background script loaded");
 
@@ -305,7 +305,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.log("Sending update request with data:", shortcutData);
 
       fetch(`${API_URL}/updateShortcut`, {
-        method: "PUT",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -374,7 +374,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       fetch(
         `${API_URL}/deleteShortcut/${request.shortcutId}?user_id=${user_id}`,
         {
-          method: "DELETE",
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
           },

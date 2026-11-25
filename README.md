@@ -83,8 +83,10 @@ All shortcut routes need `Authorization: Bearer <token>` from `/login` and act o
 | `POST` | `/register` | `{ username, email, password }` (only with `ALLOW_REGISTRATION=true`) |
 | `GET` | `/getShortcuts/:user_id` | returns your shortcuts (`:user_id` is kept for compatibility and ignored) |
 | `POST` | `/addShortcut` | `{ shortcut, expansion }` |
-| `PUT` | `/updateShortcut` | `{ id, shortcut, expansion }` |
-| `DELETE` | `/deleteShortcut/:id` | |
+| `POST` or `PUT` | `/updateShortcut` | `{ id, shortcut, expansion }` |
+| `POST` or `DELETE` | `/deleteShortcut/:id` | |
+
+The extension uses the `POST` forms: the OWASP ModSecurity Core Rule Set, enabled by default on CyberPanel and cPanel servers, blocks `PUT` and `DELETE` with a 403.
 | `POST` | `/verifyToken` | 200 if the token is valid |
 
 Tokens expire after 24 hours.
